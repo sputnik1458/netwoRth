@@ -1,0 +1,34 @@
+---
+title: "netwoRth"
+author: "Jacob Frank"
+date: "2023-08-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(openxlsx)
+
+file <- '/home/jacob/Documents/Sheets/financials.xlsx'
+sheet_names <- getSheetNames(file)
+
+sheets <- list()
+for (sheet in sheet_names) {
+  df <- list(read.xlsx(file,sheet=sheet,detectDates=T))
+  sheets <- append(sheets,df)
+}
+
+inv_total <- data.frame(matrix(ncol=3))
+names(inv_total) <- names(sheets[[1]])[-4]
+for (inv in sheets) {
+  row <- c(inv$Source[1],sum(inv$Amount),inv$Category[1])
+  inv_total <- rbind(inv_total,row)
+}
+
+inv_total <- inv_total[-1,]
+inv_total$Amount <- as.numeric(inv_total$Amount)
+
+inv_total %>% group_by(Category) %>% summarise(total=sum(Amount))
+```
+
