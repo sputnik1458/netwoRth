@@ -1,0 +1,59 @@
+---
+title: "netwoRth"
+output: html_document
+---
+
+
+
+
+```{r setup, include=FALSE}
+# knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(openxlsx)
+library(lubridate)
+library(ggplot2)
+library(scales)
+
+curr.date <- Sys.Date()
+
+dir <- '/home/jacob/Documents/Financials/'
+datafile <- paste0(dir,'data/financials.xlsx')
+
+## Read data
+data <- read.xlsx(datafile,sheet=1,detectDates=T,check.names=T)
+map <- read.xlsx(datafile,sheet=2)
+meta <- read.xlsx(datafile,sheet=3)
+
+## Combine all sources
+data.total <- data %>% 
+  mutate(Total = rowSums(select(., -Date))) %>% 
+  select(Date,Total)
+```
+
+This document summarizes the financial net worth of `r meta$Name` from `r min(data$Date)` to `r max(data$Date)`
+
+Net worth: `r scales::dollar_format()(data.total$Total[nrow(data.total)])`
+
+```{r summarize,echo=F,eval=T,warning=F,message=F}
+ggplot(data=data.total, aes(x=Date,y=Total)) +
+  geom_line() +
+  geom_point() + 
+  geom_smooth(method='lm',se=F,color='turquoise4') +
+  theme_minimal() +
+  ylab('Net worth (USD)')
+
+model <- lm(Total~Date,data.total)
+month_reg <- predict(model,data.frame(Date=c(curr.date+days(30),curr.date)))
+month_delta <- month_reg[1]-month_reg[2]
+month_delta_color <- ifelse(month_delta<0,'red','green')
+month_color_text <- paste0('<span style="color:',month_delta_color,'">',scales::dollar_format()(month_delta),"</span>")
+
+total_delta <- data.total$Total[nrow(data.total)]-data.total$Total[1]
+total_delta_color <- ifelse(total_delta<0,'red','green')
+total_color_text <- paste0('<span style="color:',total_delta_color,'">',scales::dollar_format()(total_delta),"</span>")
+```
+
+Average monthly change: `r month_color_text`
+
+Total change: `r total_color_text`
+
